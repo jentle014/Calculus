@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'EB Garamond', 'Lora', Georgia, serif;
+    background-color: #0d0c0a;
+    color: #e6dac1;
+  }
+}
+
+.font-classical {
+  font-family: 'EB Garamond', Georgia, serif;
+}
+
+.font-cinzel {
+  font-family: 'Cinzel', serif;
+}
+
+.font-writeup {
+  font-family: 'Lora', 'EB Garamond', Georgia, serif;
+  color: #f3e8d2;
+}
+
+/* Classical parchment container styling */
+.classical-card {
+  background-color: #161412;
+  border-color: #2e2820;
+}
+
+.classical-gold {
+  color: #d4af37;
+}
+
+.classical-parchment {
+  color: #f3e8d2;
+}

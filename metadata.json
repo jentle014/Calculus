@@ -1,0 +1,6 @@
+{
+  "name": "Calculus",
+  "description": "High-contrast dark calculus & study suite featuring Study, Q&A, and Test modes, option randomization, step-by-step guides, and custom question processing. Hosted @Jentle Casper's Empire.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

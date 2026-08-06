@@ -1,0 +1,24 @@
+{
+  "short_name": "Calculus Suite",
+  "name": "Calculus Study Suite",
+  "icons": [
+    {
+      "src": "/app_icon.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0f0e0d",
+  "theme_color": "#100e0c",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "description": "Calculus Study Suite for practice, guided solutions, and study tracking."
+}
