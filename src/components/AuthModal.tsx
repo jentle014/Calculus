@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, User, Mail, Lock, Building, GraduationCap, LogOut, CheckCircle2, Wifi, WifiOff, ShieldCheck, Key } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { sanitizeErrorText } from '../utils/cleanError';
 import { ModalWatermark } from './Watermark';
 import { ADMIN_EMAIL } from '../services/userService';
 
@@ -91,7 +92,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onOpenAdm
       } else if (err.code === 'auth/invalid-email') {
         message = 'Please enter a valid email address.';
       } else if (err.message) {
-        message = err.message;
+        message = sanitizeErrorText(err.message);
       }
       setError(message);
     } finally {
@@ -217,7 +218,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onOpenAdm
                 await logout();
                 onClose();
               }}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#2a1b1a] hover:bg-[#382220] text-red-300 border border-red-900/50 text-xs font-bold font-mono transition-colors"
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#1a1714] hover:bg-[#25201a] text-[#e5c158] border border-[#3e3425] text-xs font-bold font-mono transition-colors"
             >
               <LogOut className="w-4 h-4" />
               <span>Sign Out Account</span>

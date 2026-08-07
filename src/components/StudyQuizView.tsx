@@ -3,6 +3,8 @@ import { ShuffledQuestion } from '../types';
 import { Check, X, ArrowRight, RotateCcw, Lightbulb, Key, Lock, HelpCircle, Eye, ShieldCheck, Image as ImageIcon, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { isUserActivated } from '../services/userService';
+import { getOfflineImageHint } from '../services/offlineSyncService';
+import { cleanMathText } from '../utils/mathUtils';
 
 import derivativesImg from '../assets/images/calculus_derivatives_diagram_1786048382838.jpg';
 import integralsImg from '../assets/images/calculus_integrals_area_1786048442186.jpg';
@@ -55,13 +57,16 @@ export const StudyQuizView: React.FC<StudyQuizViewProps> = ({
     const topic = (question.topic || '').toLowerCase();
     const text = (question.q || '').toLowerCase();
 
+    // Check offline synced image hint store first
+    const cachedImage = getOfflineImageHint(topic || text);
+
     if (topic.includes('limit') || topic.includes('continu') || text.includes('lim')) {
-      return { src: limitsImg, title: 'Limits & Asymptotes Graph Concept' };
+      return { src: cachedImage || limitsImg, title: 'Limits & Asymptotes Graph Concept' };
     }
     if (topic.includes('integr') || topic.includes('area') || text.includes('∫') || text.includes('integral')) {
-      return { src: integralsImg, title: 'Definite Integral & Area Under Curve' };
+      return { src: cachedImage || integralsImg, title: 'Definite Integral & Area Under Curve' };
     }
-    return { src: derivativesImg, title: 'Tangent Line & Rate of Change (Derivative)' };
+    return { src: cachedImage || derivativesImg, title: 'Tangent Line & Rate of Change (Derivative)' };
   };
 
   const topicIllustration = getTopicImage();
@@ -140,7 +145,7 @@ export const StudyQuizView: React.FC<StudyQuizViewProps> = ({
           </div>
 
           <h2 className="text-xl sm:text-2xl font-bold text-[#f8f2e4] leading-snug tracking-tight font-classical pt-1">
-            {question.q}
+            {cleanMathText(question.q)}
           </h2>
         </div>
 
@@ -380,7 +385,7 @@ export const StudyQuizView: React.FC<StudyQuizViewProps> = ({
                         >
                           {optionLetter}
                         </span>
-                        <span className="font-mono text-sm leading-snug">{opt}</span>
+                        <span className="font-mono text-sm leading-snug">{cleanMathText(opt)}</span>
                       </div>
 
                       {hasAnswered && isCorrectOption && <Check className="w-5 h-5 text-emerald-400 shrink-0" />}

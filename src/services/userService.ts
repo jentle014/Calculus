@@ -18,6 +18,8 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
+import { syncOfflineBankWithImages } from './offlineSyncService';
+import { sanitizeErrorText } from '../utils/cleanError';
 import { UserProfile, ProgressMap, QuizResult, Question, QuizSettings, ActivationToken } from '../types';
 
 const PROFILE_STORAGE_KEY = 'studySuite_user_profile';
@@ -335,6 +337,14 @@ export async function redeemToken(
     // Mark device as activated persistently in offline local storage
     setDeviceActivated(true);
 
+    // Sync question bank with hints & image diagrams locally for offline use
+    let syncDataInfo = null;
+    try {
+      syncDataInfo = await syncOfflineBankWithImages();
+    } catch (syncErr) {
+      console.warn('Offline image hint sync warning:', syncErr);
+    }
+
     let updatedProfile: UserProfile | undefined = undefined;
 
     if (profile && profile.uid) {
@@ -361,9 +371,13 @@ export async function redeemToken(
       saveUserProfileLocally(updatedProfile);
     }
 
+    const syncMsg = syncDataInfo
+      ? ` Device activated! Synced ${syncDataInfo.questionCount} questions & ${syncDataInfo.imageCount} image hint diagrams locally for offline study.`
+      : ' Device activated and saved offline!';
+
     return {
       success: true,
-      message: 'Token activated successfully! The app on this device is now permanently unlocked and saved offline.',
+      message: `Token activated successfully!${syncMsg}`,
       updatedProfile
     };
   } catch (e: any) {
@@ -378,7 +392,7 @@ export async function redeemToken(
 
     return {
       success: false,
-      message: e.message || 'Error communicating with activation server. Please check your network or try again.'
+      message: sanitizeErrorText(e.message) || 'Error communicating with activation server. Please check your network or try again.'
     };
   }
 }
@@ -451,7 +465,7 @@ export async function adminActivateUserByEmail(userEmail: string): Promise<{ suc
 
     return { success: true, message: `User "${cleanEmail}" activated successfully!` };
   } catch (e: any) {
-    return { success: false, message: e.message || 'Error activating user.' };
+    return { success: false, message: sanitizeErrorText(e.message) || 'Error activating user.' };
   }
 }
 

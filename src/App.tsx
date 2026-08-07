@@ -28,6 +28,7 @@ import { CustomQuestionModal } from './components/CustomQuestionModal';
 import { AuthModal } from './components/AuthModal';
 import { ActivationModal } from './components/ActivationModal';
 import { AdminTokenModal } from './components/AdminTokenModal';
+import { QuizLaunchModal } from './components/QuizLaunchModal';
 
 export function App() {
   const { user } = useAuth();
@@ -47,6 +48,9 @@ export function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [isActivationModalOpen, setIsActivationModalOpen] = useState<boolean>(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState<boolean>(false);
+  const [isQuizLaunchModalOpen, setIsQuizLaunchModalOpen] = useState<boolean>(false);
+  const [launchInitialTopicIds, setLaunchInitialTopicIds] = useState<string[]>([]);
+  const [launchInitialMode, setLaunchInitialMode] = useState<QuizMode>('qa');
 
   // Active Quiz State
   const [activeTopicId, setActiveTopicId] = useState<string>('all');
@@ -111,19 +115,49 @@ export function App() {
     };
   }, [currentScreen]);
 
-  // Handler: Start a new Quiz Session with Shuffled Answers
-  const handleStartQuiz = (topicIdOrIds: string | string[], overrideMode?: QuizMode) => {
+  // Handler: Open Quiz Launch Modal with initial topic selection
+  const handleOpenQuizLaunchModal = (topicIdOrIds?: string | string[], overrideMode?: QuizMode) => {
     if (!user) {
       setIsAuthModalOpen(true);
       return;
     }
 
-    const topicIdStr = Array.isArray(topicIdOrIds) ? topicIdOrIds.join(',') : topicIdOrIds;
-    const effectiveSettings: QuizSettings = overrideMode
-      ? { ...settings, mode: overrideMode }
-      : settings;
+    let initialIds: string[] = [];
+    if (Array.isArray(topicIdOrIds)) {
+      initialIds = topicIdOrIds;
+    } else if (topicIdOrIds && topicIdOrIds !== 'all') {
+      initialIds = topicIdOrIds.split(',');
+    } else {
+      initialIds = TOPIC_SECTIONS.map((s) => s.id);
+    }
 
-    const questions = prepareQuizQuestions(topicIdOrIds, customQuestions, effectiveSettings);
+    setLaunchInitialTopicIds(initialIds);
+    setLaunchInitialMode(overrideMode || settings.mode || 'qa');
+    setIsQuizLaunchModalOpen(true);
+  };
+
+  // Handler: Execute Quiz Start with configured settings from modal
+  const handleExecuteStartQuiz = (
+    topicIds: string[],
+    count: number | 'all',
+    mode: QuizMode,
+    timerEnabled: boolean,
+    randomize: boolean
+  ) => {
+    if (!user) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+
+    const topicIdStr = topicIds.join(',');
+    const effectiveSettings: QuizSettings = {
+      count,
+      mode,
+      timer: timerEnabled,
+      randomize
+    };
+
+    const questions = prepareQuizQuestions(topicIds, customQuestions, effectiveSettings);
     if (questions.length === 0) {
       alert('No questions available in the selected topics.');
       return;
@@ -135,14 +169,16 @@ export function App() {
     setSelectedAnswers(new Array(questions.length).fill(null));
     setFlaggedQuestions(new Array(questions.length).fill(false));
 
-    if (overrideMode && overrideMode !== settings.mode) {
-      const newSettings = { ...settings, mode: overrideMode };
-      setSettings(newSettings);
-      saveSettings(newSettings);
-      syncToCloud(progressMap, customQuestions, newSettings);
-    }
+    setSettings(effectiveSettings);
+    saveSettings(effectiveSettings);
+    syncToCloud(progressMap, customQuestions, effectiveSettings);
 
     setCurrentScreen('quiz');
+  };
+
+  // Legacy/Direct handleStartQuiz helper
+  const handleStartQuiz = (topicIdOrIds: string | string[], overrideMode?: QuizMode) => {
+    handleOpenQuizLaunchModal(topicIdOrIds, overrideMode);
   };
 
   // Handler: Record option selection
@@ -230,6 +266,14 @@ export function App() {
   const handleSaveCustomQuestion = (newQ: Question) => {
     const updated = saveCustomQuestion(newQ);
     setCustomQuestions(updated);
+    syncToCloud(progressMap, updated, settings);
+  };
+
+  // Handler: Delete custom question
+  const handleDeleteCustomQuestion = (id: string) => {
+    const updated = customQuestions.filter((q) => q.id !== id);
+    setCustomQuestions(updated);
+    localStorage.setItem('studySuite_custom_questions', JSON.stringify(updated));
     syncToCloud(progressMap, updated, settings);
   };
 
@@ -386,6 +430,17 @@ export function App() {
         customQuestions={customQuestions}
         onClose={() => setIsCustomModalOpen(false)}
         onSaveQuestion={handleSaveCustomQuestion}
+        onDeleteQuestion={handleDeleteCustomQuestion}
+      />
+
+      <QuizLaunchModal
+        isOpen={isQuizLaunchModalOpen}
+        onClose={() => setIsQuizLaunchModalOpen(false)}
+        initialTopicIds={launchInitialTopicIds}
+        initialMode={launchInitialMode}
+        settings={settings}
+        customQuestionsCount={customQuestions.length}
+        onStartQuiz={handleExecuteStartQuiz}
       />
     </div>
   );

@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Clock, Flag, LayoutGrid, CheckCircle2, Lock,
 import { formatTime } from '../utils/quizUtils';
 import { useAuth } from '../context/AuthContext';
 import { isUserActivated } from '../services/userService';
+import { cleanMathText } from '../utils/mathUtils';
 
 interface TestQuizViewProps {
   question: ShuffledQuestion;
@@ -139,7 +140,7 @@ export const TestQuizView: React.FC<TestQuizViewProps> = ({
         <div className="space-y-2">
           <span className="text-xs font-mono uppercase text-zinc-500 tracking-widest">Formal Assessment</span>
           <h2 className="text-xl sm:text-2xl font-bold text-white leading-snug tracking-tight font-serif">
-            {question.q}
+            {cleanMathText(question.q)}
           </h2>
         </div>
 
@@ -194,7 +195,7 @@ export const TestQuizView: React.FC<TestQuizViewProps> = ({
                       >
                         {optionLetter}
                       </span>
-                      <span className="font-mono text-sm leading-snug">{opt}</span>
+                      <span className="font-mono text-sm leading-snug">{cleanMathText(opt)}</span>
                     </div>
 
                     {isSelected && <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />}

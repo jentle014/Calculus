@@ -4,6 +4,7 @@ import { Trophy, CheckCircle2, XCircle, Clock, RotateCcw, Home, ChevronDown, Che
 import { formatTime } from '../utils/quizUtils';
 import { useAuth } from '../context/AuthContext';
 import { isUserActivated } from '../services/userService';
+import { cleanMathText } from '../utils/mathUtils';
 
 interface ResultsScreenProps {
   result: QuizResult;
@@ -218,7 +219,7 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
                         )}
                       </div>
 
-                      <h3 className="text-base font-bold text-white font-serif">{q.q}</h3>
+                      <h3 className="text-base font-bold text-white font-serif">{cleanMathText(q.q)}</h3>
                     </div>
 
                     <button
@@ -240,12 +241,12 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
                       }`}
                     >
                       <span className="text-zinc-500 uppercase block text-[10px] mb-0.5">Your Choice:</span>
-                      <span className="font-bold">{userSelectedText}</span>
+                      <span className="font-bold">{cleanMathText(userSelectedText)}</span>
                     </div>
 
                     <div className="p-3 rounded-lg bg-emerald-950/40 border border-emerald-800/60 text-emerald-300">
                       <span className="text-zinc-500 uppercase block text-[10px] mb-0.5">Correct Solution:</span>
-                      <span className="font-bold">{correctText}</span>
+                      <span className="font-bold">{cleanMathText(correctText)}</span>
                     </div>
                   </div>
 
@@ -255,7 +256,7 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
                       {q.pattern && (
                         <div className="p-3 rounded-lg bg-zinc-900 border border-zinc-800 text-xs font-mono text-emerald-400">
                           <span className="font-bold">Pattern / Formula: </span>
-                          <span className="text-zinc-200">{q.pattern}</span>
+                          <span className="text-zinc-200">{cleanMathText(q.pattern)}</span>
                         </div>
                       )}
 
@@ -269,8 +270,8 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
                               key={stepIdx}
                               className="p-3 rounded-lg bg-zinc-900/90 border border-zinc-800 text-xs space-y-1"
                             >
-                              <span className="font-mono font-bold text-emerald-400 block">{st.title}</span>
-                              <p className="text-zinc-300 font-mono leading-relaxed pl-2">{st.body}</p>
+                              <span className="font-mono font-bold text-emerald-400 block">{cleanMathText(st.title)}</span>
+                              <p className="text-zinc-300 font-mono leading-relaxed pl-2">{cleanMathText(st.body)}</p>
                             </div>
                           ))}
                         </div>

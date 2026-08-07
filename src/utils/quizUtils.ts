@@ -1,5 +1,6 @@
 import { Question, ShuffledQuestion, QuizSettings, ProgressMap, QuizResult } from '../types';
 import { RAW_QUESTION_BANK, TOPIC_SECTIONS } from '../data/questionBank';
+import { cleanQuestionObject } from './mathUtils';
 
 // Fisher-Yates shuffle algorithm
 export function shuffleArray<T>(array: T[]): T[] {
@@ -193,7 +194,10 @@ export function saveProgress(topicId: string, scorePercentage: number): void {
 export function getCustomQuestions(): Question[] {
   try {
     const raw = localStorage.getItem(CUSTOM_QS_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed: Question[] = JSON.parse(raw);
+      return (parsed || []).map((q) => cleanQuestionObject(q));
+    }
   } catch (e) {
     console.warn('Failed to read custom questions from storage:', e);
   }
@@ -202,8 +206,9 @@ export function getCustomQuestions(): Question[] {
 
 export function saveCustomQuestion(question: Question): Question[] {
   try {
+    const cleaned = cleanQuestionObject(question);
     const current = getCustomQuestions();
-    const updated = [question, ...current];
+    const updated = [cleaned, ...current];
     localStorage.setItem(CUSTOM_QS_KEY, JSON.stringify(updated));
     return updated;
   } catch (e) {

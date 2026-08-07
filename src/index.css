@@ -3,8 +3,8 @@
 @layer base {
   body {
     font-family: 'EB Garamond', 'Lora', Georgia, serif;
-    background-color: #0d0c0a;
-    color: #e6dac1;
+    background-color: #000000;
+    color: #f0f0f3;
   }
 }
 
@@ -18,19 +18,35 @@
 
 .font-writeup {
   font-family: 'Lora', 'EB Garamond', Georgia, serif;
-  color: #f3e8d2;
+  color: #e2e2e8;
 }
 
-/* Classical parchment container styling */
+/* Stunning Obsidian Black card styling */
 .classical-card {
-  background-color: #161412;
-  border-color: #2e2820;
+  background-color: #0a0a0c;
+  border-color: #1f1f24;
 }
 
 .classical-gold {
-  color: #d4af37;
+  color: #e5c158;
 }
 
 .classical-parchment {
-  color: #f3e8d2;
+  color: #f5f5f7;
+}
+
+/* Custom sleek scrollbar for dark UI */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #050505;
+}
+::-webkit-scrollbar-thumb {
+  background: #22222a;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #d4af37;
 }
