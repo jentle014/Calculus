@@ -53,10 +53,16 @@ jobs:
           echo "sdk.dir=$ANDROID_HOME" > android/local.properties
           npx cap sync android
 
+      - name: Regenerate Gradle Wrapper
+        run: |
+          cd android
+          gradle wrapper --gradle-version 8.11
+
       - name: Build Debug APK with Gradle
         run: |
           cd android
-          gradle assembleDebug --no-daemon --stacktrace
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
