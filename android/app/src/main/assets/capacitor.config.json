@@ -1,0 +1,6 @@
+{
+	"appId": "com.calculus.studysuite",
+	"appName": "Calculus Study Suite",
+	"webDir": "dist",
+	"bundledWebRuntime": false
+}
