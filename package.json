@@ -9,6 +9,7 @@
     "start": "node dist/server.cjs",
     "preview": "vite preview",
     "clean": "rm -rf dist server.cjs",
+    "assets:generate": "capacitor-assets generate --android",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
@@ -27,6 +28,7 @@
     "vite": "^6.2.3"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^8.5.0",
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",

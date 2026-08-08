@@ -42,8 +42,9 @@ jobs:
       - name: Build Web App
         run: npm run build
 
-      - name: Initialize Capacitor & Sync Android
+      - name: Generate Android App Icons & Sync
         run: |
+          npx @capacitor/assets generate --android
           if [ ! -f "capacitor.config.json" ] && [ ! -f "capacitor.config.ts" ]; then
             npx cap init "Calculus Study Suite" "com.calculus.studysuite" --web-dir dist
           fi
