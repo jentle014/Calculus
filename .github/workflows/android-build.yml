@@ -27,10 +27,14 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Clean stale or corrupt Gradle wrapper JAR
+        run: |
+          rm -f android/gradle/wrapper/gradle-wrapper.jar
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          validate-wrappers: false
+          gradle-version: '8.11'
 
       - name: Install Dependencies
         run: npm install --legacy-peer-deps
@@ -49,16 +53,10 @@ jobs:
           echo "sdk.dir=$ANDROID_HOME" > android/local.properties
           npx cap sync android
 
-      - name: Ensure Clean Gradle Wrapper
-        run: |
-          cd android
-          gradle wrapper --gradle-version 8.14.3
-
       - name: Build Debug APK with Gradle
         run: |
           cd android
-          chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          gradle assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
