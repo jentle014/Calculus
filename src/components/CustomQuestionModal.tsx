@@ -12,7 +12,8 @@ import {
   Send,
   FileSpreadsheet,
   AlertCircle,
-  Crop
+  Crop,
+  Link
 } from 'lucide-react';
 import { Question } from '../types';
 import { ModalWatermark } from './Watermark';
@@ -56,6 +57,7 @@ export const CustomQuestionModal: React.FC<CustomQuestionModalProps> = ({
 
   // Manual Form State
   const [manualQ, setManualQ] = useState('');
+  const [manualImageUrl, setManualImageUrl] = useState('');
   const [optA, setOptA] = useState('');
   const [optB, setOptB] = useState('');
   const [optC, setOptC] = useState('');
@@ -119,6 +121,7 @@ export const CustomQuestionModal: React.FC<CustomQuestionModalProps> = ({
           answer: typeof qObj.answer === 'number' ? qObj.answer : 0,
           pattern: qObj.pattern || 'Calculus Formula Rule',
           hint: qObj.hint || 'Calculus problem hint',
+          imageUrl: attachedImage || undefined,
           steps: qObj.steps || [
             { title: 'Step 1: Problem Setup', body: 'Analyze problem expressions and formulas.' },
             { title: 'Step 2: Solution Step', body: 'Evaluate to reach correct option.' }
@@ -233,6 +236,7 @@ export const CustomQuestionModal: React.FC<CustomQuestionModalProps> = ({
       answer: correctIndex,
       pattern: patternText || undefined,
       hint: hintText || undefined,
+      imageUrl: manualImageUrl.trim() || undefined,
       steps: [
         {
           title: step1Title || 'Step 1: Solution Step',
@@ -243,6 +247,7 @@ export const CustomQuestionModal: React.FC<CustomQuestionModalProps> = ({
 
     onSaveQuestion(cleanQuestionObject(newQuestion));
     setManualQ('');
+    setManualImageUrl('');
     setOptA('');
     setOptB('');
     setOptC('');
@@ -420,6 +425,21 @@ export const CustomQuestionModal: React.FC<CustomQuestionModalProps> = ({
                     <Camera className="w-4 h-4 text-[#e5c158]" />
                     <span className="hidden sm:inline">Snap Photo</span>
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const url = prompt('Enter or paste Image URL link (e.g. https://example.com/diagram.png):');
+                      if (url && url.trim()) {
+                        setAttachedImage(url.trim());
+                      }
+                    }}
+                    className="p-2 rounded-xl bg-[#161620] hover:bg-[#20202c] text-[#e5c158] border border-[#2a2a38] flex items-center gap-1.5 transition-all text-xs font-mono"
+                    title="Attach via Image URL link"
+                  >
+                    <Link className="w-4 h-4 text-[#e5c158]" />
+                    <span className="hidden sm:inline">URL Link</span>
+                  </button>
                 </div>
 
                 <div className="text-[10px] text-[#808090] font-mono flex items-center gap-1">
@@ -457,6 +477,17 @@ export const CustomQuestionModal: React.FC<CustomQuestionModalProps> = ({
                 placeholder="Find y' for y = x^3 + 2x..."
                 value={manualQ}
                 onChange={(e) => setManualQ(e.target.value)}
+                className="w-full p-2.5 rounded-lg bg-[#121217] border border-[#262632] text-white font-mono"
+              />
+            </div>
+
+            <div>
+              <label className="text-[#a0a0b0] font-mono block mb-1">Image URL Link (Optional)</label>
+              <input
+                type="url"
+                placeholder="https://example.com/calculus-diagram.png"
+                value={manualImageUrl}
+                onChange={(e) => setManualImageUrl(e.target.value)}
                 className="w-full p-2.5 rounded-lg bg-[#121217] border border-[#262632] text-white font-mono"
               />
             </div>
@@ -635,6 +666,11 @@ export const CustomQuestionModal: React.FC<CustomQuestionModalProps> = ({
                     )}
                   </div>
                   <p className="font-classical font-bold text-white text-sm">{cleanMathText(cq.q)}</p>
+                  {cq.imageUrl && (
+                    <div className="relative w-full max-h-36 rounded-lg overflow-hidden border border-[#2a2a35] bg-black my-1">
+                      <img src={cq.imageUrl} alt="Stored Question Attachment" className="w-full h-full object-contain" />
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-1 text-[11px] font-mono text-[#a0a0b0]">
                     {cq.options.map((o, oIdx) => (
                       <span key={oIdx} className={oIdx === cq.answer ? 'text-emerald-400 font-bold' : ''}>

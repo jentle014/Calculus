@@ -147,6 +147,17 @@ export const StudyQuizView: React.FC<StudyQuizViewProps> = ({
           <h2 className="text-xl sm:text-2xl font-bold text-[#f8f2e4] leading-snug tracking-tight font-classical pt-1">
             {cleanMathText(question.q)}
           </h2>
+
+          {question.imageUrl && (
+            <div className="relative rounded-xl overflow-hidden border border-[#382f22] bg-black max-h-72 sm:max-h-96 flex items-center justify-center my-2 p-2">
+              <img
+                src={question.imageUrl}
+                alt="Question Diagram Attachment"
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-contain rounded-lg"
+              />
+            </div>
+          )}
         </div>
 
         {/* VISUAL DIAGRAM REFERENCE */}

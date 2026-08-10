@@ -142,6 +142,16 @@ export const TestQuizView: React.FC<TestQuizViewProps> = ({
           <h2 className="text-xl sm:text-2xl font-bold text-white leading-snug tracking-tight font-serif">
             {cleanMathText(question.q)}
           </h2>
+          {question.imageUrl && (
+            <div className="relative rounded-xl overflow-hidden border border-zinc-800 bg-black max-h-72 sm:max-h-96 flex items-center justify-center my-2 p-2">
+              <img
+                src={question.imageUrl}
+                alt="Question Diagram Attachment"
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-contain rounded-lg"
+              />
+            </div>
+          )}
         </div>
 
         {/* Options */}

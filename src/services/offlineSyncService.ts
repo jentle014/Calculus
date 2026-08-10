@@ -82,6 +82,18 @@ export async function syncOfflineBankWithImages(
     imageMap['continuity'] = b64Limits;
     imageCount = 3;
 
+    // Cache custom question attached images into image storage
+    for (const cq of customQuestions) {
+      if (cq.imageUrl && cq.id) {
+        try {
+          imageMap[cq.id] = await imageUrlToBase64(cq.imageUrl);
+          imageCount++;
+        } catch (e) {
+          console.warn('Could not cache custom image for', cq.id, e);
+        }
+      }
+    }
+
     localStorage.setItem(OFFLINE_IMAGE_HINTS_KEY, JSON.stringify(imageMap));
   } catch (e) {
     console.warn('Failed to cache image hints locally:', e);

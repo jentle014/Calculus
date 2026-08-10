@@ -3,6 +3,8 @@ import {
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
+  GoogleAuthProvider,
+  signInWithPopup,
   User
 } from 'firebase/auth';
 import {
@@ -92,52 +94,28 @@ export function saveUserProfileLocally(profile: UserProfile | null): void {
   }
 }
 
-// Register user with Email, Password, Name, Department, and School
+// Register user with Email, Password, Name, Department, and School via Firebase Auth
 export async function registerUser(
   email: string,
   pass: string,
   name: string,
   department: string,
   school: string
-): Promise<{ user: User | any; profile: UserProfile }> {
+): Promise<{ user: User; profile: UserProfile }> {
   const cleanEmail = email.trim();
   const isAdmin = cleanEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
-  let firebaseUser: any = null;
+  // Authentic Firebase user creation
+  const userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, pass);
+  const firebaseUser = userCredential.user;
 
   try {
-    const userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, pass);
-    firebaseUser = userCredential.user;
-    try {
-      await updateProfile(firebaseUser, { displayName: name });
-    } catch (e) {
-      console.warn('Could not update Firebase displayName:', e);
-    }
-  } catch (e: any) {
-    console.warn('Firebase createUserWithEmailAndPassword failed/errored:', e);
-    // If email already exists, attempt to sign in with password
-    if (e.code === 'auth/email-already-in-use') {
-      try {
-        const userCredential = await signInWithEmailAndPassword(auth, cleanEmail, pass);
-        firebaseUser = userCredential.user;
-      } catch (signInErr: any) {
-        console.warn('Fallback sign in during registration failed:', signInErr);
-      }
-    }
-
-    // If still no firebaseUser due to network, auth config, or firebase restrictions, create synthetic user
-    if (!firebaseUser) {
-      const syntheticUid = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-      firebaseUser = {
-        uid: syntheticUid,
-        email: cleanEmail,
-        displayName: name.trim() || 'Calculus Scholar',
-        emailVerified: true
-      };
-    }
+    await updateProfile(firebaseUser, { displayName: name.trim() });
+  } catch (e) {
+    console.warn('Could not update Firebase displayName:', e);
   }
 
-  const uid = firebaseUser.uid || `usr_${Date.now()}`;
+  const uid = firebaseUser.uid;
 
   const profile: UserProfile = {
     uid,
@@ -154,7 +132,7 @@ export async function registerUser(
     localStorage.setItem(`studySuite_activated_${uid}`, 'true');
   }
 
-  // Save to Firestore users collection if available
+  // Save to Firestore users collection
   try {
     await setDoc(doc(db, 'users', uid), {
       ...profile,
@@ -165,47 +143,23 @@ export async function registerUser(
     console.warn('Firestore user profile document creation skipped or deferred:', e);
   }
 
-  // Cache profile locally for offline use
+  // Cache profile locally
   saveUserProfileLocally(profile);
 
   return { user: firebaseUser, profile };
 }
 
-// Login user with Email & Password
+// Login user with Email & Password via Firebase Auth
 export async function loginUser(
   email: string,
   pass: string
-): Promise<{ user: User | any; profile: UserProfile }> {
+): Promise<{ user: User; profile: UserProfile }> {
   const cleanEmail = email.trim();
   const isAdmin = cleanEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
-  let firebaseUser: any = null;
-
-  try {
-    const userCredential = await signInWithEmailAndPassword(auth, cleanEmail, pass);
-    firebaseUser = userCredential.user;
-  } catch (e: any) {
-    console.warn('Firebase signInWithEmailAndPassword failed:', e);
-    // Fallback: check if local profile exists for this email or construct local user
-    const local = getStoredUserProfile();
-    if (local && local.email.toLowerCase() === cleanEmail.toLowerCase()) {
-      firebaseUser = {
-        uid: local.uid,
-        email: local.email,
-        displayName: local.name,
-        emailVerified: true
-      };
-    } else {
-      const syntheticUid = `usr_${Date.now()}`;
-      firebaseUser = {
-        uid: syntheticUid,
-        email: cleanEmail,
-        displayName: cleanEmail.split('@')[0] || 'Calculus Scholar',
-        emailVerified: true
-      };
-    }
-  }
-
+  // Authentic Firebase sign in
+  const userCredential = await signInWithEmailAndPassword(auth, cleanEmail, pass);
+  const firebaseUser = userCredential.user;
   const uid = firebaseUser.uid;
 
   // Fetch or construct profile
@@ -230,12 +184,12 @@ export async function loginUser(
       };
     }
   } catch (e) {
-    console.warn('Could not fetch user profile from Firestore online, trying cache/local:', e);
+    console.warn('Could not fetch user profile from Firestore online:', e);
   }
 
   if (!profile) {
     const local = getStoredUserProfile();
-    if (local && (local.uid === uid || local.email.toLowerCase() === cleanEmail.toLowerCase())) {
+    if (local && local.uid === uid) {
       profile = {
         ...local,
         isActivated: local.isActivated || isAdmin || localStorage.getItem(`studySuite_activated_${uid}`) === 'true'
@@ -259,6 +213,46 @@ export async function loginUser(
   }
 
   saveUserProfileLocally(profile);
+  return { user: firebaseUser, profile };
+}
+
+// Sign in with Google via Firebase Auth
+export async function loginWithGoogle(): Promise<{ user: User; profile: UserProfile }> {
+  const provider = new GoogleAuthProvider();
+  const userCredential = await signInWithPopup(auth, provider);
+  const firebaseUser = userCredential.user;
+  const uid = firebaseUser.uid;
+  const cleanEmail = firebaseUser.email || '';
+  const isAdmin = cleanEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+
+  let profile = await fetchUserProfileDoc(uid);
+  if (!profile) {
+    profile = {
+      uid,
+      email: cleanEmail,
+      name: firebaseUser.displayName || 'Calculus Scholar',
+      department: 'Mathematics & Science',
+      school: 'University Campus',
+      isActivated: isAdmin,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    try {
+      await setDoc(doc(db, 'users', uid), {
+        ...profile,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+    } catch (e) {
+      console.warn('Firestore user profile document creation skipped or deferred:', e);
+    }
+  }
+
+  if (profile.isActivated || isAdmin) {
+    localStorage.setItem(`studySuite_activated_${uid}`, 'true');
+  }
+  saveUserProfileLocally(profile);
+
   return { user: firebaseUser, profile };
 }
 

@@ -18,6 +18,7 @@ interface AuthContextType {
   isOffline: boolean;
   register: (email: string, pass: string, name: string, dept: string, school: string) => Promise<void>;
   login: (email: string, pass: string) => Promise<void>;
+  loginGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -67,18 +68,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           }
         }
       } else {
-        const localProf = getStoredUserProfile();
-        if (localProf) {
-          setProfile(localProf);
-          setUser({
-            uid: localProf.uid,
-            email: localProf.email,
-            displayName: localProf.name
-          } as User);
-        } else {
-          setUser(null);
-          setProfile(null);
-        }
+        // Strictly valid Firebase Auth: if no Firebase user is authenticated, user and profile are null
+        setUser(null);
+        setProfile(null);
       }
       setLoading(false);
     });
@@ -108,10 +100,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const loginGoogle = async () => {
+    setLoading(true);
+    try {
+      const { loginWithGoogle } = await import('../services/userService');
+      const { user: googleUser, profile: googleProfile } = await loginWithGoogle();
+      setUser(googleUser);
+      setProfile(googleProfile);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = async () => {
     setLoading(true);
     try {
       await logoutUser();
+      setUser(null);
       setProfile(null);
     } finally {
       setLoading(false);
@@ -134,6 +139,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isOffline,
         register,
         login,
+        loginGoogle,
         logout,
         refreshProfile
       }}

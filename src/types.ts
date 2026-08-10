@@ -11,6 +11,7 @@ export interface Question {
   answer: number; // 0-based index of correct option
   pattern?: string; // Formula pattern or key identity rule float
   hint?: string; // Quick hint for Q&A mode
+  imageUrl?: string; // Optional attached photo or diagram URL/Base64
   steps: QuestionStep[]; // Step-by-step solution breakdown for Study mode & Review
 }
 

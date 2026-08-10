@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { ShuffledQuestion, QuizSettings, ProgressMap, QuizResult, Question, QuizMode } from './types';
 import {
   getStoredSettings,
@@ -13,25 +13,60 @@ import {
 } from './utils/quizUtils';
 import { TOPIC_SECTIONS } from './data/questionBank';
 import { useAuth } from './context/AuthContext';
-import { syncUserDataToFirestore, loadUserDataFromFirestore } from './services/userService';
+import { syncUserDataToFirestore, loadUserDataFromFirestore, isUserActivated } from './services/userService';
+import { syncOfflineBankWithImages } from './services/offlineSyncService';
 
 import { Header } from './components/Header';
 import { Watermark } from './components/Watermark';
-import { HomeScreen } from './components/HomeScreen';
-import { SettingsModal } from './components/SettingsModal';
-import { StudyQuizView } from './components/StudyQuizView';
-import { QAQuizView } from './components/QAQuizView';
-import { TestQuizView } from './components/TestQuizView';
-import { ResultsScreen } from './components/ResultsScreen';
-import { FormulaSheetModal } from './components/FormulaSheetModal';
-import { CustomQuestionModal } from './components/CustomQuestionModal';
-import { AuthModal } from './components/AuthModal';
-import { ActivationModal } from './components/ActivationModal';
-import { AdminTokenModal } from './components/AdminTokenModal';
-import { QuizLaunchModal } from './components/QuizLaunchModal';
+
+// Lazy loaded views and screens
+const HomeScreen = lazy(() => import('./components/HomeScreen').then((m) => ({ default: m.HomeScreen })));
+const StudyQuizView = lazy(() => import('./components/StudyQuizView').then((m) => ({ default: m.StudyQuizView })));
+const QAQuizView = lazy(() => import('./components/QAQuizView').then((m) => ({ default: m.QAQuizView })));
+const TestQuizView = lazy(() => import('./components/TestQuizView').then((m) => ({ default: m.TestQuizView })));
+const ResultsScreen = lazy(() => import('./components/ResultsScreen').then((m) => ({ default: m.ResultsScreen })));
+
+// Lazy loaded modals
+const SettingsModal = lazy(() => import('./components/SettingsModal').then((m) => ({ default: m.SettingsModal })));
+const FormulaSheetModal = lazy(() => import('./components/FormulaSheetModal').then((m) => ({ default: m.FormulaSheetModal })));
+const CustomQuestionModal = lazy(() => import('./components/CustomQuestionModal').then((m) => ({ default: m.CustomQuestionModal })));
+const AuthModal = lazy(() => import('./components/AuthModal').then((m) => ({ default: m.AuthModal })));
+const ActivationModal = lazy(() => import('./components/ActivationModal').then((m) => ({ default: m.ActivationModal })));
+const AdminTokenModal = lazy(() => import('./components/AdminTokenModal').then((m) => ({ default: m.AdminTokenModal })));
+const QuizLaunchModal = lazy(() => import('./components/QuizLaunchModal').then((m) => ({ default: m.QuizLaunchModal })));
+
+function ScreenLoader() {
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh] p-8 text-center animate-in fade-in duration-300">
+      <div className="relative w-12 h-12 mb-4">
+        <div className="absolute inset-0 rounded-full border-2 border-[#3a2f20]"></div>
+        <div className="absolute inset-0 rounded-full border-2 border-[#d4af37] border-t-transparent animate-spin"></div>
+      </div>
+      <p className="text-xs font-mono text-[#c9a24d] tracking-widest uppercase animate-pulse">
+        Loading module...
+      </p>
+    </div>
+  );
+}
+
+function ModalLoader() {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="w-full max-w-sm rounded-2xl bg-[#151310] border border-[#2e271d] p-6 text-center space-y-3">
+        <div className="relative w-8 h-8 mx-auto">
+          <div className="absolute inset-0 rounded-full border-2 border-[#3a2f20]"></div>
+          <div className="absolute inset-0 rounded-full border-2 border-[#d4af37] border-t-transparent animate-spin"></div>
+        </div>
+        <p className="text-xs font-mono text-[#b8a78a] tracking-wider uppercase">
+          Loading dialog...
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export function App() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   // Navigation & Screen State
   const [currentScreen, setCurrentScreen] = useState<'home' | 'quiz' | 'results'>('home');
@@ -40,6 +75,17 @@ export function App() {
   const [settings, setSettings] = useState<QuizSettings>(getStoredSettings);
   const [progressMap, setProgressMap] = useState<ProgressMap>(getStoredProgress);
   const [customQuestions, setCustomQuestions] = useState<Question[]>(getCustomQuestions);
+
+  // Auto-load & cache image storage on token unlocked devices while online
+  useEffect(() => {
+    const isUnlocked = isUserActivated(profile);
+    if (isUnlocked && typeof window !== 'undefined') {
+      // Sync image hints & custom question attached images to persistent local storage
+      syncOfflineBankWithImages(customQuestions).catch((e) => {
+        console.warn('Background image storage sync failed:', e);
+      });
+    }
+  }, [profile, customQuestions]);
 
   // Modal Dialog States
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
@@ -312,136 +358,140 @@ export function App() {
 
       {/* Main View Area */}
       <main className="flex-1 flex flex-col justify-start">
-        {currentScreen === 'home' && (
-          <HomeScreen
-            progressMap={progressMap}
-            customQuestionsCount={customQuestions.length}
-            settings={settings}
-            onSelectTopic={(topicId, mode) => handleStartQuiz(topicId, mode)}
-            onOpenSettings={() => setIsSettingsOpen(true)}
-            onOpenFormulaSheet={() => setIsFormulaSheetOpen(true)}
-            onOpenCustomModal={() => setIsCustomModalOpen(true)}
-          />
-        )}
+        <Suspense fallback={<ScreenLoader />}>
+          {currentScreen === 'home' && (
+            <HomeScreen
+              progressMap={progressMap}
+              customQuestionsCount={customQuestions.length}
+              settings={settings}
+              onSelectTopic={(topicId, mode) => handleStartQuiz(topicId, mode)}
+              onOpenSettings={() => setIsSettingsOpen(true)}
+              onOpenFormulaSheet={() => setIsFormulaSheetOpen(true)}
+              onOpenCustomModal={() => setIsCustomModalOpen(true)}
+            />
+          )}
 
-        {currentScreen === 'quiz' && activeQuestions.length > 0 && (
-          <div className="w-full my-auto">
-            {settings.mode === 'study' && (
-              <StudyQuizView
-                question={activeQuestions[currentIndex]}
-                currentIndex={currentIndex}
-                totalQuestions={activeQuestions.length}
-                onAnswerSelected={(optIdx) => {
-                  handleSelectOption(currentIndex, optIdx);
-                }}
-                onNextQuestion={() => {
-                  if (currentIndex < activeQuestions.length - 1) {
-                    setCurrentIndex((prev) => prev + 1);
-                  } else {
-                    handleSubmitQuiz();
-                  }
-                }}
-                onOpenActivationModal={() => setIsActivationModalOpen(true)}
-              />
-            )}
+          {currentScreen === 'quiz' && activeQuestions.length > 0 && (
+            <div className="w-full my-auto">
+              {settings.mode === 'study' && (
+                <StudyQuizView
+                  question={activeQuestions[currentIndex]}
+                  currentIndex={currentIndex}
+                  totalQuestions={activeQuestions.length}
+                  onAnswerSelected={(optIdx) => {
+                    handleSelectOption(currentIndex, optIdx);
+                  }}
+                  onNextQuestion={() => {
+                    if (currentIndex < activeQuestions.length - 1) {
+                      setCurrentIndex((prev) => prev + 1);
+                    } else {
+                      handleSubmitQuiz();
+                    }
+                  }}
+                  onOpenActivationModal={() => setIsActivationModalOpen(true)}
+                />
+              )}
 
-            {settings.mode === 'qa' && (
-              <QAQuizView
-                question={activeQuestions[currentIndex]}
-                currentIndex={currentIndex}
-                totalQuestions={activeQuestions.length}
-                selectedAnswer={selectedAnswers[currentIndex]}
-                isFlagged={flaggedQuestions[currentIndex]}
-                onSelectOption={(optIdx) => handleSelectOption(currentIndex, optIdx)}
-                onToggleFlag={() => handleToggleFlag(currentIndex)}
-                onPrevious={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
-                onNext={() => setCurrentIndex((prev) => Math.min(activeQuestions.length - 1, prev + 1))}
-                onSubmit={handleSubmitQuiz}
-                onOpenActivationModal={() => setIsActivationModalOpen(true)}
-              />
-            )}
+              {settings.mode === 'qa' && (
+                <QAQuizView
+                  question={activeQuestions[currentIndex]}
+                  currentIndex={currentIndex}
+                  totalQuestions={activeQuestions.length}
+                  selectedAnswer={selectedAnswers[currentIndex]}
+                  isFlagged={flaggedQuestions[currentIndex]}
+                  onSelectOption={(optIdx) => handleSelectOption(currentIndex, optIdx)}
+                  onToggleFlag={() => handleToggleFlag(currentIndex)}
+                  onPrevious={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
+                  onNext={() => setCurrentIndex((prev) => Math.min(activeQuestions.length - 1, prev + 1))}
+                  onSubmit={handleSubmitQuiz}
+                  onOpenActivationModal={() => setIsActivationModalOpen(true)}
+                />
+              )}
 
-            {settings.mode === 'test' && (
-              <TestQuizView
-                question={activeQuestions[currentIndex]}
-                currentIndex={currentIndex}
-                totalQuestions={activeQuestions.length}
-                selectedAnswers={selectedAnswers}
-                flaggedQuestions={flaggedQuestions}
-                elapsedSeconds={elapsedSeconds}
-                showTimer={settings.timer}
-                onSelectOption={(optIdx) => handleSelectOption(currentIndex, optIdx)}
-                onToggleFlag={(idx) => handleToggleFlag(idx)}
-                onJumpToQuestion={(idx) => setCurrentIndex(idx)}
-                onPrevious={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
-                onNext={() => setCurrentIndex((prev) => Math.min(activeQuestions.length - 1, prev + 1))}
-                onSubmitExam={handleSubmitQuiz}
-                onOpenActivationModal={() => setIsActivationModalOpen(true)}
-              />
-            )}
-          </div>
-        )}
+              {settings.mode === 'test' && (
+                <TestQuizView
+                  question={activeQuestions[currentIndex]}
+                  currentIndex={currentIndex}
+                  totalQuestions={activeQuestions.length}
+                  selectedAnswers={selectedAnswers}
+                  flaggedQuestions={flaggedQuestions}
+                  elapsedSeconds={elapsedSeconds}
+                  showTimer={settings.timer}
+                  onSelectOption={(optIdx) => handleSelectOption(currentIndex, optIdx)}
+                  onToggleFlag={(idx) => handleToggleFlag(idx)}
+                  onJumpToQuestion={(idx) => setCurrentIndex(idx)}
+                  onPrevious={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
+                  onNext={() => setCurrentIndex((prev) => Math.min(activeQuestions.length - 1, prev + 1))}
+                  onSubmitExam={handleSubmitQuiz}
+                  onOpenActivationModal={() => setIsActivationModalOpen(true)}
+                />
+              )}
+            </div>
+          )}
 
-        {currentScreen === 'results' && lastQuizResult && (
-          <ResultsScreen
-            result={lastQuizResult}
-            onRestartQuiz={() => handleStartQuiz(activeTopicId)}
-            onGoHome={() => setCurrentScreen('home')}
-            onOpenActivationModal={() => setIsActivationModalOpen(true)}
-          />
-        )}
+          {currentScreen === 'results' && lastQuizResult && (
+            <ResultsScreen
+              result={lastQuizResult}
+              onRestartQuiz={() => handleStartQuiz(activeTopicId)}
+              onGoHome={() => setCurrentScreen('home')}
+              onOpenActivationModal={() => setIsActivationModalOpen(true)}
+            />
+          )}
+        </Suspense>
       </main>
 
       {/* Permanent Footer Watermark (On Every Screen) */}
       <Watermark />
 
-      {/* Global Modals */}
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        onOpenAdminModal={() => setIsAdminModalOpen(true)}
-      />
+      {/* Global Modals (Lazy Loaded with Suspense) */}
+      <Suspense fallback={<ModalLoader />}>
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          onOpenAdminModal={() => setIsAdminModalOpen(true)}
+        />
 
-      <ActivationModal
-        isOpen={isActivationModalOpen}
-        onClose={() => setIsActivationModalOpen(false)}
-        onOpenAuthModal={() => setIsAuthModalOpen(true)}
-      />
+        <ActivationModal
+          isOpen={isActivationModalOpen}
+          onClose={() => setIsActivationModalOpen(false)}
+          onOpenAuthModal={() => setIsAuthModalOpen(true)}
+        />
 
-      <AdminTokenModal
-        isOpen={isAdminModalOpen}
-        onClose={() => setIsAdminModalOpen(false)}
-      />
+        <AdminTokenModal
+          isOpen={isAdminModalOpen}
+          onClose={() => setIsAdminModalOpen(false)}
+        />
 
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        settings={settings}
-        onClose={() => setIsSettingsOpen(false)}
-        onSaveSettings={handleSaveSettings}
-      />
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          settings={settings}
+          onClose={() => setIsSettingsOpen(false)}
+          onSaveSettings={handleSaveSettings}
+        />
 
-      <FormulaSheetModal
-        isOpen={isFormulaSheetOpen}
-        onClose={() => setIsFormulaSheetOpen(false)}
-      />
+        <FormulaSheetModal
+          isOpen={isFormulaSheetOpen}
+          onClose={() => setIsFormulaSheetOpen(false)}
+        />
 
-      <CustomQuestionModal
-        isOpen={isCustomModalOpen}
-        customQuestions={customQuestions}
-        onClose={() => setIsCustomModalOpen(false)}
-        onSaveQuestion={handleSaveCustomQuestion}
-        onDeleteQuestion={handleDeleteCustomQuestion}
-      />
+        <CustomQuestionModal
+          isOpen={isCustomModalOpen}
+          customQuestions={customQuestions}
+          onClose={() => setIsCustomModalOpen(false)}
+          onSaveQuestion={handleSaveCustomQuestion}
+          onDeleteQuestion={handleDeleteCustomQuestion}
+        />
 
-      <QuizLaunchModal
-        isOpen={isQuizLaunchModalOpen}
-        onClose={() => setIsQuizLaunchModalOpen(false)}
-        initialTopicIds={launchInitialTopicIds}
-        initialMode={launchInitialMode}
-        settings={settings}
-        customQuestionsCount={customQuestions.length}
-        onStartQuiz={handleExecuteStartQuiz}
-      />
+        <QuizLaunchModal
+          isOpen={isQuizLaunchModalOpen}
+          onClose={() => setIsQuizLaunchModalOpen(false)}
+          initialTopicIds={launchInitialTopicIds}
+          initialMode={launchInitialMode}
+          settings={settings}
+          customQuestionsCount={customQuestions.length}
+          onStartQuiz={handleExecuteStartQuiz}
+        />
+      </Suspense>
     </div>
   );
 }
